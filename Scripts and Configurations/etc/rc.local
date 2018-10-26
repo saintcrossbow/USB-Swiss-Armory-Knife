@@ -1,0 +1,152 @@
+#!/bin/sh
+
+
+#Copyright(C) 2018  saintcrossbow@gmail.com
+
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation, either version 3 of the License, or
+#(at your option) any later version.
+
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+#GNU General Public License for more details.
+
+#You should have received a copy of the GNU General Public License
+#along with this program.If not, see http://www.gnu.org/licenses/
+
+# From https://groups.google.com/forum/m/#!topic/usbarmory/lfpfKsRZvQI
+# This script swaps the device tree between the original and
+# the hostmode.
+#
+# It keeps the state by whether the file /root/dts-host-mode exists.
+# If it does, then the current mode is host-mode and the script
+# switches to original for the next boot.
+# If it does not exist, the current mode is original and the script
+# switches to host for the next boot.
+#
+# In original mode, everything is as close to original as possible:
+# the LED is in heartbeat mode.
+#
+# In host mode, LED is in timer mode.
+#
+# The intended usage of the script is to run at startup so that the
+# modes are
+# swapped on every boot. This means that during normal use of the
+# system the
+# state file meaning is inverted as it indicates what the state will be
+# after the next boot.
+#
+
+# 2018 Sep 22: Using this as a template to boot between Kali and Responder
+# even though it is not host mode.
+
+# Which mode are we in?
+if [ -f /root/dts-host-mode ]
+then
+  if [ -f /root/payload-mode ]
+  then
+    # Host payload mode 
+    # Also known as real host mode
+    logger -t GRC "Booted in host mode"
+
+    # Setup dt for next boot, which will be into original mode
+    # Kept this from original to ensure failsafe
+    rm /boot/imx53-usbarmory.dtb
+    cp /boot/imx53-usbarmory-original.dtb /boot/imx53-usbarmory.dtb
+    rm /root/dts-host-mode
+
+    # Start payloads
+    /payloads/main.sh &
+  else
+    # Responder mode
+    logger -t GRC "Booted in USB responder mode"
+
+    # Clear leases after turn off dhcp
+    pkill dhcpd
+    rm -f /var/lib/dhcp/dhcpd.leases
+    sleep .5
+    touch /var/lib/dhcp/dhcpd.leases
+    sync
+
+    # Get responder mode and restart
+    cp /etc/dhcp/dhcpd.responder /etc/dhcp/dhcpd
+    sync
+    /usr/sbin/dhcpd start
+
+    # Set LED to timer mode
+    modprobe ledtrig_timer
+    echo timer >/sys/class/leds/LED/trigger
+
+    # Setup dt for next boot, which will be into original mode
+    # Kept this from original to ensure failsafe
+    rm /boot/imx53-usbarmory.dtb
+    cp /boot/imx53-usbarmory-original.dtb /boot/imx53-usbarmory.dtb
+    rm /root/dts-host-mode
+
+    # Setup for responder network/interfaces
+    cp /etc/network/interfaces.responder /etc/network/interfaces
+    sync
+
+    # Fully restart networking
+    ip addr flush usb0
+    systemctl restart networking
+
+    # Restart USB (for what it's worth)
+    ifdown usb0 && ifup usb0
+
+    # Find out what IP we think we are
+    ip addr show > /root/responder_ip.last
+    sync
+
+    # Start responder
+    #/usr/bin/screen -dmS responder bash -c 'cd /etc/responder/; python Responder.py -I usb0 -f -w -r -d -F'
+    delay 1
+    cd /etc/responder/
+    # The sudo and the output redirect are likely both unnuecessary
+    /usr/bin/python ./Responder.py -I usb0 -f -w -r -d -F &
+    exit 0
+
+  fi
+
+else
+  # Original mode
+  logger -t GRC "Booted in USB gadget (normal) mode"
+
+  # Clear leases, turn off dhcp, get USB mode and restart
+  pkill dhcpd
+  cp /etc/dhcp/dhcpd.usb /etc/dhcp/dhcpd
+  sync
+  /usr/sbin/dhcpd start
+
+  # Set LED to heartbeat mode (should be already)
+  modprobe ledtrig_heartbeat
+  echo heartbeat >/sys/class/leds/LED/trigger
+
+  # Setup dt for next boot, which will be into "host" or "responder"  mode
+  rm /boot/imx53-usbarmory.dtb
+  if [ -f /root/payload-mode ]
+  then
+    cp /boot/imx53-usbarmory-host.dtb /boot/imx53-usbarmory.dtb
+  else
+    cp /boot/imx53-usbarmory-original.dtb /boot/imx53-usbarmory.dtb
+  fi
+  touch /root/dts-host-mode
+
+  # Get back into USB interfaces
+  cp /etc/network/interfaces.usb /etc/network/interfaces
+
+  # Fully restart networking
+  ip addr flush usb0
+  systemctl restart networking
+
+  # Restart USB (for what it's worth)
+  ifdown usb0 && ifup usb0
+
+  # Find out what IP we think we are
+  ip addr show > /root/usb_ip.last
+  sync
+
+fi
+

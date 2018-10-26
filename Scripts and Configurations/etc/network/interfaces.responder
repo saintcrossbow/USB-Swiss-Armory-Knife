@@ -1,0 +1,11 @@
+# interfaces(5) file used by ifup(8) and ifdown(8)
+# Include files from /etc/network/interfaces.d:
+source-directory /etc/network/interfaces.d
+auto usb0
+allow-hotplug usb0
+iface usb0 inet static
+  address 192.168.2.201
+  netmask 255.255.255.0
+  gateway 192.168.2.1
+
+

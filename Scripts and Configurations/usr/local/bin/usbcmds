@@ -1,0 +1,37 @@
+#!/bin/bash
+#Copyright(C) 2018  saintcrossbow@gmail.com
+
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation, either version 3 of the License, or
+#(at your option) any later version.
+
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+#GNU General Public License for more details.
+
+#You should have received a copy of the GNU General Public License
+#along with this program.If not, see http://www.gnu.org/licenses/
+echo "USB Swiss Knife "
+echo "-----------------------------"
+echo "unlockfs       Access encrypted files"
+echo "lockfs         Lock file system"
+echo "* Note:        Use /home/burnbasket for working files"
+echo "usbdown        Wipe burnbasket and shutdown safely"
+echo "startusb       Start in USB mode on next boot (no toggle)"
+echo "startresp      Start in host mode / responder mode (work with altboot)"
+echo "altboot        Set if starting in payload (host) or responder mode"
+echo "ledswitch      Change LED light"
+echo "resetlogs      Remove besside logs from root"
+echo "----------------------------"
+echo "payld-crack    Start an offline crack targeting standard passwords"
+echo "payld-kismet   Start passive wifi scanning (kismet)"
+echo "payld-besside  Start active wifi scanning (besside)"
+echo "----------------------------"
+echo "Special Setup"
+echo "Kismet logs stored in /kismet"
+echo "Responder logs stored in /etc/responder/logs"
+echo "Besside logs on /"
+echo ""
+
